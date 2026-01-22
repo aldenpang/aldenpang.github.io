@@ -4,7 +4,7 @@ import { TRANSLATIONS, Language } from './constants';
 import { GoogleGenAI } from "@google/genai";
 
 // 使用相对路径导入图片，Vite 会处理这个导入并返回正确的 URL
-import profileImg from './IMG_8062_cpy.JPG';
+const profileImg = './IMG_8062_cpy.JPG';
 
 const Navbar: React.FC<{ lang: Language; setLang: (l: Language) => void }> = ({ lang, setLang }) => {
   const [scrolled, setScrolled] = useState(false);
