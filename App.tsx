@@ -138,7 +138,11 @@ const App: React.FC = () => {
 
     try {
         // Initialize Gemini API client
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = import.meta.env.VITE_API_KEY;
+        if (!apiKey) {
+          throw new Error('Missing VITE_API_KEY');
+        }
+        const ai = new GoogleGenAI({ apiKey });
         
         // Prepare history for generateContent
         const contents = chatMessages.map(m => ({
