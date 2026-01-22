@@ -1,7 +1,10 @@
-
 import React, { useEffect, useRef, useState } from 'react';
-import { Mail, Linkedin, Award, Briefcase, GraduationCap, Microscope, ArrowUpRight, Cpu, Languages } from 'lucide-react';
+import { Mail, Linkedin, Award, Briefcase, GraduationCap, ArrowUpRight, MessageSquare, Send, X, Loader2 } from 'lucide-react';
 import { TRANSLATIONS, Language } from './constants';
+import { GoogleGenAI } from "@google/genai";
+
+// 使用相对路径导入图片，Vite 会处理这个导入并返回正确的 URL
+import profileImg from './IMG_8062_cpy.JPG';
 
 const Navbar: React.FC<{ lang: Language; setLang: (l: Language) => void }> = ({ lang, setLang }) => {
   const [scrolled, setScrolled] = useState(false);
@@ -85,6 +88,12 @@ const App: React.FC = () => {
   const t = TRANSLATIONS[lang];
   const revealRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  // AI Chat State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<{role: 'user' | 'model', text: string}[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -117,6 +126,50 @@ const App: React.FC = () => {
     window.location.href = `mailto:${user}@${domain}`;
   };
 
+  // Chat handling using Gemini API
+  const handleChatSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || isChatLoading) return;
+
+    const userText = chatInput;
+    setChatMessages(prev => [...prev, { role: 'user', text: userText }]);
+    setChatInput('');
+    setIsChatLoading(true);
+
+    try {
+        // Initialize Gemini API client
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        // Prepare history for generateContent
+        const contents = chatMessages.map(m => ({
+            role: m.role,
+            parts: [{ text: m.text }]
+        }));
+        contents.push({ role: 'user', parts: [{ text: userText }] });
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents,
+            config: {
+                systemInstruction: `You are a professional AI representative for Shuo Pang, a Senior Technical Strategist and Researcher. 
+                Answer questions about his career, skills, and background professionally and concisely.
+                Shuo Pang has deep expertise in Human-Computer Interaction (HCI), AI, Wearable technology, and Real-Time Rendering.
+                He has worked at Huawei Canada and held leadership roles at OVA and ShadeRealm.
+                Current Language of the portfolio: ${lang}. 
+                Resume data for context: ${JSON.stringify(TRANSLATIONS[lang])}`,
+            }
+        });
+
+        const modelText = response.text || "I'm sorry, I encountered an issue processing your request.";
+        setChatMessages(prev => [...prev, { role: 'model', text: modelText }]);
+    } catch (err) {
+        console.error("Gemini API error:", err);
+        setChatMessages(prev => [...prev, { role: 'model', text: "The AI assistant is currently unavailable. Please reach out via LinkedIn or Email." }]);
+    } finally {
+        setIsChatLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fcfcfc]">
       <Navbar lang={lang} setLang={setLang} />
@@ -143,7 +196,7 @@ const App: React.FC = () => {
           <div className="md:col-span-5 relative section-reveal" ref={addToRefs}>
              <div className="aspect-[3/4] bg-slate-100 rounded-3xl overflow-hidden relative shadow-2xl group border border-slate-100/50">
                 <img 
-                  src="IMG_8062_cpy.JPG" 
+                  src={profileImg} 
                   alt="Shuo Pang" 
                   className="w-full h-full object-cover object-center transition-all duration-700 ease-in-out group-hover:scale-105"
                 />
@@ -303,6 +356,87 @@ const App: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Gemini AI Assistant Widget */}
+      <div className="fixed bottom-6 right-6 z-[60]">
+          {/* Floating Toggle Button */}
+          <button 
+              onClick={() => setIsChatOpen(!isChatOpen)}
+              className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 transition-all active:scale-95 group border-2 border-white"
+          >
+              {isChatOpen ? <X size={24} /> : <MessageSquare size={24} className="group-hover:rotate-12 transition-transform" />}
+          </button>
+
+          {/* Chat Window Container */}
+          {isChatOpen && (
+              <div className="absolute bottom-20 right-0 w-[320px] md:w-[380px] h-[520px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-300">
+                  {/* Chat Header */}
+                  <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                      <div>
+                          <h3 className="text-sm font-academic font-bold text-slate-900">Research Assistant</h3>
+                          <p className="text-[10px] text-blue-600 font-mono flex items-center">
+                              <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
+                              Powered by Gemini
+                          </p>
+                      </div>
+                      <button onClick={() => setIsChatOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                          <X size={18} />
+                      </button>
+                  </div>
+
+                  {/* Messages Area */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/20 scrollbar-hide">
+                      {chatMessages.length === 0 && (
+                          <div className="text-center py-10 px-6">
+                              <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                  <MessageSquare className="text-blue-600" size={20} />
+                              </div>
+                              <p className="text-xs text-slate-500 leading-relaxed italic">
+                                  "Hello! I'm Shuo's AI representative. Ask me about his experience in HCI, AI, or Real-Time Rendering."
+                              </p>
+                          </div>
+                      )}
+                      {chatMessages.map((msg, idx) => (
+                          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`max-w-[85%] p-3 rounded-2xl text-[13px] leading-relaxed shadow-sm ${
+                                  msg.role === 'user' 
+                                      ? 'bg-blue-600 text-white rounded-tr-none' 
+                                      : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'
+                              }`}>
+                                  {msg.text}
+                              </div>
+                          </div>
+                      ))}
+                      {isChatLoading && (
+                          <div className="flex justify-start">
+                              <div className="bg-white border border-slate-200 p-3 rounded-2xl rounded-tl-none shadow-sm flex items-center space-x-2">
+                                  <Loader2 size={14} className="animate-spin text-blue-600" />
+                                  <span className="text-[10px] text-slate-400 font-mono">Synthesizing response...</span>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+
+                  {/* Input Form */}
+                  <form onSubmit={handleChatSend} className="p-4 border-t border-slate-100 bg-white flex items-center space-x-2">
+                      <input 
+                          type="text" 
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          placeholder="Type your question..."
+                          className="flex-1 bg-slate-100 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                      />
+                      <button 
+                          type="submit"
+                          disabled={isChatLoading || !chatInput.trim()}
+                          className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-blue-700 transition-colors shadow-md shadow-blue-200 active:scale-90"
+                      >
+                          <Send size={16} />
+                      </button>
+                  </form>
+              </div>
+          )}
+      </div>
     </div>
   );
 };

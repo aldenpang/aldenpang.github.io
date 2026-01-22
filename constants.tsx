@@ -38,7 +38,7 @@ export const TRANSLATIONS: Record<Language, {
         location: "Montreal, Canada",
         period: "2021 ~ 2025",
         description: [
-          "Operate as a Senior Technical Planner at the nexus of academic research and industrial innovation.",
+          "Operate as a Senior Technical Researcher at the nexus of academic research and industrial innovation.",
           "Scrutinize academic and industry landscapes to discern emerging trends in HCI, AI, Wearable Technologies, and Real-Time Rendering.",
           "Organize academic salons, fostering environments for knowledge exchange and collaborative discourse.",
           "Collaborate with professors from top-tier Canadian universities to create academically rigorous outputs."
